@@ -19,6 +19,8 @@ jobs:
     uses: phpbb-extensions/test-framework/.github/workflows/tests.yml@3.3.x
     with:
       EXTNAME: rmcgirr83/nationalflags   # Your extension vendor/package name (required)
+      # EPV runs in the epv job below instead
+      EPV: 0
 
       # Check for files with executable permissions? 1 (yes) or 0 (no)
       # Default: 1
@@ -56,3 +58,10 @@ jobs:
       # List the PHP versions you want your extension tested with.
       # Default: '["7.2", "7.3", "7.4", "8.0", "8.1", "8.2", "8.3", "8.4"]'
       PHP_VERSION_MATRIX: '["8.0", "8.1", "8.2", "8.3", "8.4"]'
+
+  # EPV (Extension Pre Validator), failing on any Fatal or Error finding not
+  # listed in .github/epv-allowed.txt
+  epv:
+    uses: phpbbmodders/.github/.github/workflows/epv.yml@v1
+    with:
+      EXTNAME: rmcgirr83/nationalflags

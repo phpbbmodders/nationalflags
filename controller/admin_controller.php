@@ -31,6 +31,10 @@ use phpbb\language\language;
 */
 class admin_controller
 {
+	protected $ext_path;
+	protected $ext_path_web;
+	protected $images;
+
 	/**
 	* define our constants
 	**/
@@ -145,8 +149,10 @@ class admin_controller
 			nationalflags $nationalflags,
 			factory $files_factory,
 			filesystem $filesystem,
-			language $language)
+			language $language,
+			\rmcgirr83\nationalflags\core\flag_images $images)
 	{
+		$this->images = $images;
 		$this->cache = $cache;
 		$this->config = $config;
 		$this->db = $db;
@@ -202,7 +208,7 @@ class admin_controller
 			$validate_row = [
 				'flags_num_display' => ['num', false, 1, 100],
 			];
-			$error = validate_data($check_row, $validate_row);
+			$error = array_map([$this->language, 'lang'], validate_data($check_row, $validate_row));
 
 			if (!sizeof($error))
 			{
@@ -274,7 +280,7 @@ class admin_controller
 
 		$sql = 'SELECT f.*, COUNT(u.user_flag) as user_count
 			FROM ' . $this->flags_table . ' f
-				LEFT JOIN ' . USERS_TABLE . " u on f.flag_id = u.user_flag
+				LEFT JOIN ' . USERS_TABLE . " u on f.flag_id = u.user_flag AND " . $this->db->sql_in_set('u.user_type', [USER_NORMAL, USER_FOUNDER]) . "
 			GROUP BY f.flag_id
 			ORDER BY f.flag_name ASC";
 		$result = $this->db->sql_query_limit($sql, $this->config['topics_per_page'], $start);
@@ -295,10 +301,10 @@ class admin_controller
 			$this->template->assign_block_vars('flags', [
 				'FLAG_NAME'		=> $row['flag_name'],
 				'FLAG_DEFAULT'	=> $flag_default,
-				'FLAG_IMG'		=> $this->ext_path_web . 'flags/' . $row['flag_image'],
+				'FLAG_IMG'		=> $this->images->url($row['flag_image']),
 				'FLAG_ID'		=> $row['flag_id'],
 				'USER_COUNT'	=> $user_count,
-				'U_FLAG'		=> $this->helper->route('rmcgirr83_nationalflags_getflags', ['flag_id' => $row['flag_id']]),
+				'U_FLAG'		=> $this->helper->route('rmcgirr83_nationalflags_getflags', ['flag_id' => $this->nationalflags->flag_url_identifier($row['flag_id'])]),
 				'U_EDIT'		=> $this->u_action . "&amp;flag_id={$row['flag_id']}&amp;action=edit",
 				'U_DELETE'		=> $this->u_action . "&amp;flag_id={$row['flag_id']}&amp;action=delete"
 			]);
@@ -414,7 +420,7 @@ class admin_controller
 
 			if (!sizeof($errors) && $this->can_upload_flag())
 			{
-				$flag_row['flag_image'] = $this->flag_upload($errors, 'edit_flag');
+				$flag_row['flag_image'] = $this->flag_upload($errors, 'edit_flag', $row['flag_image']);
 			}
 
 			if (!sizeof($errors))
@@ -430,12 +436,18 @@ class admin_controller
 					WHERE flag_id = ' . (int) $flag_id;
 				$this->db->sql_query($sql);
 
+				$this->cache->destroy('_user_flags');
+				if ($row['flag_image'] !== $flag_row['flag_image'])
+				{
+					$this->remove_unused_image($row['flag_image']);
+				}
+
 				$this->log_message('LOG_FLAG_EDIT', $flag_row['flag_name'], 'MSG_FLAG_EDITED');
 
 			}
 		}
 
-		$found_flag = $this->ext_path_web . 'flags/' . $row['flag_image'];
+		$found_flag = $this->images->url($row['flag_image']);
 		$flag_list =  $this->list_flag_names();
 		$flag_count = sizeof(explode(",", $flag_list));
 		$this->template->assign_vars([
@@ -479,6 +491,13 @@ class admin_controller
 			$flag_row = $this->db->sql_fetchrow($result);
 			$this->db->sql_freeresult($result);
 
+			if (!$flag_row)
+			{
+				trigger_error($this->language->lang('FLAG_ERROR_NOT_EXIST'), E_USER_WARNING);
+				return;
+			}
+
+			$this->db->sql_transaction('begin');
 			// Delete the flag...
 			$this->db->sql_query('DELETE FROM ' . $this->flags_table . ' WHERE flag_id = ' . (int) $flag_id);
 
@@ -488,8 +507,10 @@ class admin_controller
 				WHERE user_flag = ' . (int) $flag_id;
 			$this->db->sql_query($sql);
 
-			// remove the flag from the server
-			@unlink($this->ext_path_web . 'flags/' . $flag_row['flag_image']);
+			$this->db->sql_transaction('commit');
+			$this->nationalflags->trash_the_cache();
+			$this->cache->destroy('_user_flags');
+			$this->remove_unused_image($flag_row['flag_image']);
 
 			$this->log_message('LOG_FLAGS_DELETED', $flag_row['flag_name'], 'MSG_FLAGS_DELETED');
 		}
@@ -543,7 +564,7 @@ class admin_controller
 
 		if (!$this->can_upload_flag())
 		{
-			if (empty($flag_image))
+			if (empty($flag_image) || !$this->images->exists($flag_image))
 			{
 				$errors[] = $this->language->lang('FLAG_ERROR_NO_FLAG_IMG');
 			}
@@ -574,7 +595,7 @@ class admin_controller
 	*/
 	protected function can_upload_flag()
 	{
-		return (file_exists($this->ext_path_web . 'flags') && $this->filesystem->is_writable($this->ext_path_web . 'flags') && (@ini_get('file_uploads') || strtolower(@ini_get('file_uploads')) == 'on'));
+		return $this->images->can_upload() && (bool) ini_get('file_uploads');
 	}
 
 	/**
@@ -605,49 +626,60 @@ class admin_controller
 	/**
 	* Copy a flag image to server.
 	*
-	* @param	string	$flag 	The flag image from usrs hard drive
-	* @param	array	$error	The array error, passed by reference
+	* @param array $errors Upload errors, passed by reference
+	* @param string $action ACP action
+	* @param string $old_flag Database-owned filename retained for an edit without an upload
 	* @return	false|string	String if no errors, else false
 	*/
-	private function flag_upload(&$errors, $action = '')
+	private function flag_upload(&$errors, $action = '', $old_flag = '')
 	{
-		$old_flag = $this->request->variable('old_flag', '');
-
-		//Set upload directory
-		$upload_dir = $this->ext_path_web . 'flags';
-		$upload_dir = str_replace(['../', '..\\', './', '.\\'], '', $upload_dir);
-
 		$upload = $this->files_factory->get('upload')
 			->set_error_prefix('FLAG_IMAGE_')
 			->set_allowed_extensions(['gif', 'png', 'jpeg', 'jpg'])
 			->set_allowed_dimensions(self::MAX_WIDTH, self::MAX_HEIGHT, self::MAX_WIDTH, self::MAX_HEIGHT);
-
-		// Uploading from a form, form name
 		$file = $upload->handle_upload('files.types.form', 'flag_upload');
 
-		// if the flag_upload field is empty and we are editing...return the old flag
-		$name = $file->get('realname');
-		if ($action == 'edit_flag' && empty($name))
+		// Only the database-owned filename may be retained on an edit without an upload.
+		if ($action === 'edit_flag' && $file->get('realname') === '')
 		{
 			return $old_flag;
 		}
-
-		$file->move_file($upload_dir);
-
-		if (sizeof($file->error))
+		if (!$file->error)
+		{
+			try
+			{
+				$this->images->prepare_upload_directory();
+				$file->clean_filename('unique_ext');
+				$file->move_file($this->images->upload_directory());
+			}
+			catch (\phpbb\filesystem\exception\filesystem_exception $e)
+			{
+				$errors[] = $this->language->lang('FLAG_IMAGE_UPLOAD_DIRECTORY');
+				return false;
+			}
+		}
+		if ($file->error)
 		{
 			$file->remove();
 			$errors = array_merge($errors, $file->error);
 			return false;
 		}
 
-		// phpbb_chmod doesn't work well here on some servers so be explicit
-		@chmod($this->ext_path_web . 'flags/' . $file->get('uploadname'), 0644);
+		return 'upload/' . $file->get('realname');
+	}
 
-		// remove the old flag if set
-		@unlink($this->ext_path_web . 'flags/' . $old_flag);
-
-		return $file->get('uploadname');
+	/** Remove managed images only after the final database reference is gone. */
+	private function remove_unused_image($image)
+	{
+		$sql = 'SELECT COUNT(*) AS image_count FROM ' . $this->flags_table .
+			" WHERE flag_image = '" . $this->db->sql_escape($image) . "'";
+		$result = $this->db->sql_query($sql);
+		$count = (int) $this->db->sql_fetchfield('image_count');
+		$this->db->sql_freeresult($result);
+		if (!$count)
+		{
+			$this->images->remove($image);
+		}
 	}
 
 	/**
@@ -672,6 +704,7 @@ class admin_controller
 		$this->log->add('admin', $this->user->data['user_id'], $this->user->ip, $log_message, time(), [$flag_name]);
 
 		$this->cache->destroy('_user_flags');
+		$this->nationalflags->trash_the_cache();
 		$this->nationalflags->cache_flags();
 
 		trigger_error($this->language->lang($user_message) . adm_back_link($this->u_action));

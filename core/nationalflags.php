@@ -23,6 +23,9 @@ use Symfony\Component\HttpFoundation\JsonResponse;
 
 class nationalflags
 {
+	protected $ext_path;
+	protected $ext_path_web;
+	protected $images;
 
 	/** @var config $config */
 	protected $config;
@@ -92,8 +95,10 @@ class nationalflags
 			manager $ext_manager,
 			path_helper $path_helper,
 			array $flag_constants,
+			flag_images $images,
 			cc_operator $cc_operator = null)
 	{
+		$this->images = $images;
 		$this->config = $config;
 		$this->helper = $helper;
 		$this->cache = $cache;
@@ -121,11 +126,11 @@ class nationalflags
 	{
 		$flags = $this->get_flag_cache();
 
-		if ($flag_id)
+		if ($flag_id && isset($flags[$flag_id]))
 		{
 			$flag_name = $this->flag_name_lang_var($flags[$flag_id]['flag_name']);
 			$size = (!empty($size)) ? 'style="height:' . $size . 'px; width:auto;"' : '';
-			$flag = '<img class="flag_image" src="' . $this->ext_path_web . 'flags/' . $flags[$flag_id]['flag_image'] . '" ' . $size . ' alt="' . $flag_name . '" title="' . $flag_name . '" />';
+			$flag = '<img class="flag_image" src="' . $this->images->url($flags[$flag_id]['flag_image']) . '" ' . $size . ' alt="' . $flag_name . '" title="' . $flag_name . '" />';
 
 			return $flag;
 		}
@@ -163,6 +168,66 @@ class nationalflags
 			// cache this data for ever, can only change in ACP
 			$this->cache->put('_user_flags', $user_flags);
 		}
+	}
+
+	/**
+	 * Resolve a numeric ID or an unambiguous image country code to a flag ID.
+	 * USA is accepted as an alias for US when no flag uses USA itself.
+	 *
+	 * @param string|int $identifier URL identifier
+	 * @return int|false Flag ID, or false for an unknown or ambiguous identifier
+	 */
+	public function resolve_flag_id($identifier)
+	{
+		$flags = $this->get_flag_cache();
+		$identifier = (string) $identifier;
+		if (ctype_digit($identifier))
+		{
+			return isset($flags[$identifier]) ? (int) $identifier : false;
+		}
+
+		$code = strtoupper($identifier);
+		if (!preg_match('/^[A-Z]{2,3}(?:-[A-Z]{2,3})?$/D', $code))
+		{
+			return false;
+		}
+
+		$matches = [];
+		foreach ($flags as $id => $flag)
+		{
+			if (strtoupper(pathinfo($flag['flag_image'], PATHINFO_FILENAME)) === $code)
+			{
+				$matches[] = (int) $id;
+			}
+		}
+
+		if (!$matches && $code === 'USA')
+		{
+			return $this->resolve_flag_id('US');
+		}
+
+		return count($matches) === 1 ? $matches[0] : false;
+	}
+
+	/**
+	 * Get a readable URL identifier, retaining numeric IDs for custom or ambiguous flags.
+	 *
+	 * @param int $flag_id Stored flag ID
+	 * @return string|int Country code or numeric ID
+	 */
+	public function flag_url_identifier($flag_id)
+	{
+		$flags = $this->get_flag_cache();
+		if (isset($flags[$flag_id]))
+		{
+			$code = strtoupper(pathinfo($flags[$flag_id]['flag_image'], PATHINFO_FILENAME));
+			if ($this->resolve_flag_id($code) === (int) $flag_id)
+			{
+				return $code;
+			}
+		}
+
+		return (int) $flag_id;
 	}
 
 	/**
@@ -216,9 +281,19 @@ class nationalflags
 		}
 
 		$cached_flags = $this->get_flag_cache();
-		$cached_user_flags = $this->get_users_and_flags_cache();
-
-		$cached_user_flags = array_count_values($cached_user_flags);
+		// Count the same eligible members as the country member list, while retaining
+		// all users in the separate profile/post flag cache.
+		$cached_user_flags = [];
+		$sql = 'SELECT user_flag, COUNT(*) AS user_count
+			FROM ' . USERS_TABLE . '
+			WHERE user_flag > 0 AND ' . $this->db->sql_in_set('user_type', [USER_NORMAL, USER_FOUNDER]) . '
+			GROUP BY user_flag';
+		$result = $this->db->sql_query($sql);
+		while ($row = $this->db->sql_fetchrow($result))
+		{
+			$cached_user_flags[$row['user_flag']] = (int) $row['user_count'];
+		}
+		$this->db->sql_freeresult($result);
 
 		if (sizeof($cached_user_flags))
 		{
@@ -258,7 +333,7 @@ class nationalflags
 					$this->template->assign_block_vars('flag', [
 						'FLAG' 			=> $this->get_user_flag($cached_flags[$i]['flag_id']),
 						'FLAG_USERS'	=> $this->user->lang('FLAG_USERS', (int) $cached_flags[$i]['user_count']),
-						'U_FLAG'		=> $this->helper->route('rmcgirr83_nationalflags_getflags', ['flag_id' => $cached_flags[$i]['flag_id']]),
+						'U_FLAG'		=> $this->helper->route('rmcgirr83_nationalflags_getflags', ['flag_id' => $this->flag_url_identifier($cached_flags[$i]['flag_id'])]),
 					]);
 
 					++$count;
@@ -293,6 +368,7 @@ class nationalflags
 	public function get_flag($flag_id)
 	{
 		$flags = $this->get_flag_cache();
+		$flags_id = [];
 
 		foreach ($flags as $id => $data)
 		{
@@ -314,8 +390,7 @@ class nationalflags
 			}
 		}
 
-		$flag_img = $this->ext_path . 'flags/' . $flags[$flag_id]['flag_image'];
-		$flag_img = str_replace('./', generate_board_url() . '/', $flag_img); //fix paths
+		$flag_img = $this->images->url($flags[$flag_id]['flag_image']);
 
 		$flag_name = $this->flag_name_lang_var($flags[$flag_id]['flag_name']);
 
@@ -334,7 +409,7 @@ class nationalflags
 	 */
 	public function get_flag_cache()
 	{
-		return $this->cache->get('_user_flags');
+		return $this->cache->get('_user_flags') ?: [];
 	}
 
 	/**
@@ -448,6 +523,7 @@ class nationalflags
 	public function display_flag_options($user_flag)
 	{
 		$flags = $this->get_flag_cache();
+		$flags_id = [];
 
 		foreach ($flags as $id => $data)
 		{
@@ -480,7 +556,7 @@ class nationalflags
 
 		$this->template->assign_vars([
 			'USER_FLAG'			=> $user_flag,
-			'FLAG_IMAGE'		=> ($flag_image) ? $this->ext_path . 'flags/' . $flag_image : '',
+			'FLAG_IMAGE'		=> ($flag_image) ? $this->images->url($flag_image) : '',
 			'FLAG_NAME'			=> $flag_name,
 			'S_FLAG_OPTIONS'	=> $s_flag_options,
 			'S_FLAG_REQUIRED'	=> ($this->config['flags_required']) ? true : false,

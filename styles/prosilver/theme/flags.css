@@ -1,27 +1,27 @@
 ul.flags {
-    width:100%;
-    text-align:center;
+	width:100%;
+	text-align:center;
 	list-style-type: none;
 	padding-bottom: 6px;
 }
 
 ul.flags li {
-    display: inline-block;
-    font-size: inherit;
-    line-height: inherit;
+	display: inline-block;
+	font-size: inherit;
+	line-height: inherit;
 	padding-bottom: 2px;
 	width: 95px;
 }
 
 ul.flags li.flagslist {
-    text-align:center;
+	text-align:center;
 	margin: 7px 2px 0;
 }
 
 .flagusers {
-    font-size: 1.2em;
-    line-height: 2.2em;
-    padding: 4px 0;
+	font-size: 1.2em;
+	line-height: 2.2em;
+	padding: 4px 0;
 }
 
 .memberlist_flags {

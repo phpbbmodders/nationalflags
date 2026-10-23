@@ -12,11 +12,17 @@ rmcgirr83_nationalflags_getflags:
     path: /flags/{flag_id}
     defaults: { _controller: rmcgirr83.nationalflags.main.controller:get_flags, page: 1}
     requirements:
-        flag_id: \d+
+        flag_id: \d+|[A-Za-z]{2,3}(?:-[A-Za-z]{2,3})?
 
 rmcgirr83_nationalflags_getflags_page:
     path: /flags/{flag_id}/page/{page}
     defaults: { _controller: rmcgirr83.nationalflags.main.controller:get_flags}
     requirements:
-        flag_id: \d+
+        flag_id: \d+|[A-Za-z]{2,3}(?:-[A-Za-z]{2,3})?
         page: \d+
+
+rmcgirr83_nationalflags_image:
+    path: /flag-image/{filename}
+    defaults: { _controller: rmcgirr83.nationalflags.images:display_image }
+    requirements:
+        filename: '[a-f0-9]{32}\.(?:png|gif|jpe?g)'

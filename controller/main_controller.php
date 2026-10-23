@@ -30,6 +30,8 @@ use phpbb\exception\http_exception;
 */
 class main_controller
 {
+	protected $ext_path;
+
 	/** @var auth $auth */
 	protected $auth;
 
@@ -159,7 +161,7 @@ class main_controller
 		//let's get the flags
 		$sql = 'SELECT f.flag_id, f.flag_name, f.flag_image, COUNT(u.user_flag) as user_count
 			FROM ' . $this->flags_table . ' f
-			LEFT JOIN ' . USERS_TABLE . ' u on f.flag_id = u.user_flag
+			LEFT JOIN ' . USERS_TABLE . ' u on f.flag_id = u.user_flag AND ' . $this->db->sql_in_set('u.user_type', [USER_NORMAL, USER_FOUNDER]) . '
 		WHERE u.user_flag > 0
 		GROUP BY f.flag_id
 		ORDER BY user_count DESC, f.flag_name ASC';
@@ -178,7 +180,7 @@ class main_controller
 			$this->template->assign_block_vars('flag', [
 				'FLAG' 				=> $flag_image,
 				'FLAG_USER_COUNT'	=> $user_flag_count,
-				'U_FLAG'			=> $this->helper->route('rmcgirr83_nationalflags_getflags', ['flag_id' => $row['flag_id']]),
+				'U_FLAG'			=> $this->helper->route('rmcgirr83_nationalflags_getflags', ['flag_id' => $this->nationalflags->flag_url_identifier($row['flag_id'])]),
 			]);
 		}
 		$this->db->sql_freeresult($result);
@@ -205,7 +207,7 @@ class main_controller
 	/**
 	 * Display the users of flags page
 	 *
-	 * @param $flag_id	int		the id of the flag
+	 * @param $flag_id	string|int	the country code or id of the flag
 	 * @param $page		int		page number we are on
 	 * @access public
 	 */
@@ -217,10 +219,11 @@ class main_controller
 			throw new http_exception(401, 'NOT_AUTHORISED');
 		}
 
+		$flag_id = $this->nationalflags->resolve_flag_id($flag_id);
 		$flags = $this->nationalflags->get_flag_cache();
 
 		// ensure our flag id passed actually exists in the cache
-		if (!isset($flags[$flag_id]))
+		if ($flag_id === false || !isset($flags[$flag_id]))
 		{
 			throw new http_exception(404, 'FLAG_NOT_EXIST');
 		}
@@ -307,7 +310,7 @@ class main_controller
 				'rmcgirr83_nationalflags_getflags_page',
 			],
 			'params' => [
-				'flag_id' => $flag_id,
+				'flag_id' => $this->nationalflags->flag_url_identifier($flag_id),
 			],
 		], 'pagination', 'page', $total_users, $limit, $start);
 
@@ -339,7 +342,7 @@ class main_controller
 
 		// Assign breadcrumb template vars for the flags page
 		$this->template->assign_block_vars('navlinks', [
-			'U_VIEW_FORUM'		=> $this->helper->route('rmcgirr83_nationalflags_getflags', ['flag_id' => $flag_id]),
+			'U_VIEW_FORUM'		=> $this->helper->route('rmcgirr83_nationalflags_getflags', ['flag_id' => $this->nationalflags->flag_url_identifier($flag_id)]),
 			'FORUM_NAME'		=> $flag_name,
 		]);
 	}

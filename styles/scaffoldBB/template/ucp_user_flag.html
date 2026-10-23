@@ -1,7 +1,7 @@
 {% if AJAX_FLAG_INFO %}
-    <script>
-        var AJAX_FLAG_INFO = "{{ AJAX_FLAG_INFO|escape('js') }}";
-    </script>
+	<script>
+		var AJAX_FLAG_INFO = "{{ AJAX_FLAG_INFO|escape('js') }}";
+	</script>
 	<dl class="gx-0 row">
 		<dt class="col-md-5"><label for="user_flag">{{ lang('USER_FLAG') }}{{ lang('COLON') }}{% if S_FLAG_REQUIRED %} *{% endif %}</label><br>{% if FLAG_DEFAULT %}{{ lang('USER_FLAG_EXPLAIN') }}{% endif %}</dt>
 		<dd class="col-md-auto hstack mb-0"><select class="form-select form-select-sm" name="user_flag" id="user_flag">{{ S_FLAG_OPTIONS }}</select>&nbsp;<span id="flag_image" {% if not FLAG_IMAGE %}style="display:none;"{% endif %}><img class="flag_image" src="{{ FLAG_IMAGE }}" alt="{{ FLAG_NAME }}" title="{{ FLAG_NAME }}" /></span></dd>

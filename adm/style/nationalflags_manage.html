@@ -12,7 +12,7 @@
 </fieldset>
 {% if !S_ERROR %}
 <div class="warningbox">
-	<p>{% if not S_UPLOAD_FLAG %}{{ lang('ACP_NO_UPLOAD') }}{% else %}{% if S_CAN_OVERWRITE %}{{ lang('FLAG_UPLOAD_NOTICE') }}{% else %}{{ lang('FLAG_UPLOAD_NO_OVERWRITE') }}{% endif %}{% endif %}</p>
+	<p>{% if not S_UPLOAD_FLAG %}{{ lang('ACP_NO_UPLOAD') }}{% else %}{{ lang('FLAG_UPLOAD_NOTICE') }}{% endif %}</p>
 </div>
 {% elseif S_ERROR %}
 <div class="errorbox">
@@ -34,7 +34,6 @@
 			<dt><label>{{ lang('FILENAME') }}{{ lang('COLON') }}</label></dt>
 			<dd>
 				<input type="file" name="flag_upload" class="inputbox autowidth" />
-				<input type="hidden" name="old_flag" value="{{ FLAG_IMAGE }}" />
 			</dd>
 		</dl>
 		{% endif %}

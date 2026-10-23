@@ -11,8 +11,8 @@
 
 	$("#user_flag").change(function () {
 		var flag_id = $(this).val();
-        $.ajax({
-            url: AJAX_FLAG_INFO.replace(/[^\/]+$/, flag_id),
+		$.ajax({
+			url: AJAX_FLAG_INFO.replace(/[^\/]+$/, flag_id),
 			dataType: 'text',
 			success: function(data){
 				var json = $.parseJSON(data);

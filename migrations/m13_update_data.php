@@ -9,7 +9,7 @@
 
 namespace rmcgirr83\nationalflags\migrations;
 
-// this file is encoded incorrectly and doesn't perform in the manner it should. Migration file m15 should correct the issue with the cedilla.
+// Preserve the historical non-UTF-8 value as escaped bytes; m15 repairs the stored name.
 class m13_update_data extends \phpbb\db\migration\migration
 {
 	static public function depends_on()
@@ -32,7 +32,7 @@ class m13_update_data extends \phpbb\db\migration\migration
 		{
 			$sql_ary = [
 				[
-					'flag_name'		=> 'Curaçao',
+					'flag_name'		=> "Cura\xE7ao",
 					'flag_image'	=> 'cw.png',
 				],
 			];

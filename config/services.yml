@@ -25,6 +25,7 @@ services:
             - '@files.factory'
             - '@filesystem'
             - '@language'
+            - '@rmcgirr83.nationalflags.images'
 
     rmcgirr83.nationalflags.main.controller:
         class: rmcgirr83\nationalflags\controller\main_controller
@@ -79,4 +80,14 @@ services:
             - '@ext.manager'
             - '@path_helper'
             - '%flag_constants%'
+            - '@rmcgirr83.nationalflags.images'
             - '@?phpbb.collapsiblecategories.operator'
+
+    rmcgirr83.nationalflags.images:
+        class: rmcgirr83\nationalflags\core\flag_images
+        arguments:
+            - '%core.root_path%'
+            - '@controller.helper'
+            - '@filesystem'
+            - '@ext.manager'
+            - '@path_helper'

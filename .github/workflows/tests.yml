@@ -6,7 +6,7 @@ on:
       - main      # Main production branch
       - master    # Legacy or alternative main branch
       - dev/*     # Any feature branches under "dev/", e.g., dev/new-feature
-  
+
   pull_request:   # Run tests when pull requests are made on these branches in your repo,
     branches:     # ... or remove this branches section to run tests on all your branches
       - main
@@ -49,15 +49,15 @@ jobs:
       # Run functional tests if you have them? 1 (yes) or 0 (no)
       # Default: 1
       RUN_FUNCTIONAL_TESTS: 0
- 
+
       # Preferred PHP version used for all test jobs.
       # Default: '7.2'
-      PRIMARY_PHP_VERSION: '8.0'
+      PRIMARY_PHP_VERSION: '8.4'
 
       # The MySQL and PostgreSQL jobs run tests across multiple PHP versions.
       # List the PHP versions you want your extension tested with.
       # Default: '["7.2", "7.3", "7.4", "8.0", "8.1", "8.2", "8.3", "8.4"]'
-      PHP_VERSION_MATRIX: '["8.0", "8.1", "8.2", "8.3", "8.4"]'
+      PHP_VERSION_MATRIX: '["8.4"]'
 
   # EPV (Extension Pre Validator), failing on any Fatal or Error finding not
   # listed in .github/epv-allowed.txt
@@ -65,3 +65,13 @@ jobs:
     uses: phpbbmodders/.github/.github/workflows/epv.yml@v1
     with:
       EXTNAME: rmcgirr83/nationalflags
+
+  flag-urls:
+    name: Flag regression checks
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@v4
+      - run: php tests/flag_urls_test.php
+      - run: php tests/flag_images_test.php

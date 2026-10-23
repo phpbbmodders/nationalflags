@@ -31,6 +31,8 @@ use Symfony\Component\EventDispatcher\EventSubscriberInterface;
 */
 class listener implements EventSubscriberInterface
 {
+	protected $ext_path;
+
 	/** @var auth $auth */
 	protected $auth;
 
@@ -276,6 +278,7 @@ class listener implements EventSubscriberInterface
 	{
 		// stop nubs from being, uhmmm, nubs
 		$flags = $this->nationalflags->get_flag_cache();
+		$flags_id = [];
 		foreach ($flags as $id => $data)
 		{
 			$flags_id[] = $id;
@@ -416,7 +419,7 @@ class listener implements EventSubscriberInterface
 		$event['post_row'] = array_merge($event['post_row'], [
 			'USER_FLAG' => $flag,
 			'FLAG_POSITION'	=> $this->config['flag_position'],
-			'U_FLAG'	=> ($flag) ? $this->helper->route('rmcgirr83_nationalflags_getflags', ['flag_id' => $flags[$event['user_poster_data']['user_flag']]['flag_id']]) : '',
+			'U_FLAG'	=> ($flag) ? $this->helper->route('rmcgirr83_nationalflags_getflags', ['flag_id' => $this->nationalflags->flag_url_identifier($flags[$event['user_poster_data']['user_flag']]['flag_id'])]) : '',
 		]);
 	}
 
@@ -438,7 +441,7 @@ class listener implements EventSubscriberInterface
 			$this->template->assign_vars([
 				'USER_FLAG'		=> $flag,
 				'S_FLAGS'		=> true,
-				'U_FLAG'		=> ($flag) ? $this->helper->route('rmcgirr83_nationalflags_getflags', ['flag_id' => $flags[$event['member']['user_flag']]['flag_id']]) : '',
+				'U_FLAG'		=> ($flag) ? $this->helper->route('rmcgirr83_nationalflags_getflags', ['flag_id' => $this->nationalflags->flag_url_identifier($flags[$event['member']['user_flag']]['flag_id'])]) : '',
 				$flag_display_position => true,
 			]);
 		}
@@ -479,7 +482,7 @@ class listener implements EventSubscriberInterface
 
 		$array = array_merge($array, [
 			'USER_FLAG'		=> $flag,
-			'U_FLAG'		=> ($flag) ? $this->helper->route('rmcgirr83_nationalflags_getflags', ['flag_id' => $flags[$event['row']['user_flag']]['flag_id']]) : '',
+			'U_FLAG'		=> ($flag) ? $this->helper->route('rmcgirr83_nationalflags_getflags', ['flag_id' => $this->nationalflags->flag_url_identifier($flags[$event['row']['user_flag']]['flag_id'])]) : '',
 		]);
 
 		$event['tpl_ary'] = $array;
@@ -519,7 +522,7 @@ class listener implements EventSubscriberInterface
 
 			$array = $event['msg_data'];
 			$array['USER_FLAG'] = $flag;
-			$array['U_FLAG'] = ($flag) ? $this->helper->route('rmcgirr83_nationalflags_getflags', ['flag_id' => $event['user_info']['user_flag']]) : '';
+			$array['U_FLAG'] = ($flag) ? $this->helper->route('rmcgirr83_nationalflags_getflags', ['flag_id' => $this->nationalflags->flag_url_identifier($event['user_info']['user_flag'])]) : '';
 			$event['msg_data'] = $array;
 
 			$flag_display_position = $this->nationalflags->flag_display_position();

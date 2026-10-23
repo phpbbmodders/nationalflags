@@ -909,7 +909,7 @@ class m6_update_data extends \phpbb\db\migration\migration
 					'flag_image'	=> 'ck.png',
 				],
 				[
-					'flag_name'		=> 'Curaçao',
+					'flag_name'		=> "Cura\xE7ao",
 					'flag_image'	=> 'cw.png',
 				],
 				[

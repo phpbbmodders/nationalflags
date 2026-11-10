@@ -117,7 +117,7 @@ $lang = array_merge($lang, [
 	'FLAG_IMAGE_URL_NOT_FOUND'				=> 'The file cannot be found.',
 	'FLAG_IMAGE_WRONG_FILESIZE'				=> 'The flag size must be between 0 and %1d %2s.',
 	'FLAG_IMAGE_WRONG_SIZE'					=> 'The flag must be exactly %3$s wide and %4$s high. The submitted image is %5$s wide and %6$s high.',
-	'FLAGS_REQUIRE_540'			=> 'This extension requires at least PHP version 8.3.36 and phpBB version 3.3.19 or higher.  Please update your PHP version and/or your phpBB version in order to use the extension.',
+	'FLAGS_REQUIRE_540'			=> 'This extension requires at least PHP version 8.1 and phpBB version 3.3.19 or higher.  Please update your PHP version and/or your phpBB version in order to use the extension.',
 
 	// end comment
 	'TOO_SMALL_FLAGS_NUM_DISPLAY'	=> 'The number chosen for the number of flags to display is too small',

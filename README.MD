@@ -16,7 +16,7 @@ Users of a Flag
 ## Requirements
 
 - phpBB 3.3.19 or later
-- PHP 8.3.36 or later
+- PHP 8.1 or later
 
 ## Installation
 

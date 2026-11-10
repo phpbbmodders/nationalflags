@@ -1,7 +1,7 @@
 {
 	"name": "rmcgirr83/nationalflags",
 	"type": "phpbb-extension",
-	"description": "Allows a user to be able to choose a national flag and have a top (those with the most users selecting the flag) number of flags display on the index page of a phpBB forum.  Header is link to a listing of all users of a flag.  Clicking on user count of the flag displays the users that have that flag set.  This extension requires at least phpBB version 3.3.19 and PHP 8.3.36. Must have version 2.0.0 of Collapsible Forum Categories to take advantage of that extension.",
+	"description": "Allows a user to be able to choose a national flag and have a top (those with the most users selecting the flag) number of flags display on the index page of a phpBB forum.  Header is link to a listing of all users of a flag.  Clicking on user count of the flag displays the users that have that flag set.  This extension requires at least phpBB version 3.3.19 and PHP 8.1. Must have version 2.0.0 of Collapsible Forum Categories to take advantage of that extension.",
 	"homepage": "https://github.com/rmcgirr83/nationalflags",
 	"version": "2.4.5-dev",
 	"time": "2026-10-23",
@@ -23,7 +23,7 @@
 		}
 	],
 	"require": {
-		"php": ">=8.3.36",
+		"php": ">=8.1.0",
 		"composer/installers": "^1.0 || ^2.0"
 	},
 	"extra": {
